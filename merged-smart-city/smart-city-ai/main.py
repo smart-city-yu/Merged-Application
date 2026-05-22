@@ -51,11 +51,12 @@ if DETECTOR == "nemotron":
 # Startup: verify Ollama is reachable
 # ---------------------------------------------------------------------------
 import httpx as _httpx
+_OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
 try:
-    _r = _httpx.get("http://localhost:11434", timeout=3)
-    print(f"[INFO] Ollama is running (HTTP {_r.status_code}) — model: {OLLAMA_MODEL}")
+    _r = _httpx.get(_OLLAMA_HOST, timeout=3)
+    print(f"[INFO] Ollama is running at {_OLLAMA_HOST} (HTTP {_r.status_code}) — model: {OLLAMA_MODEL}")
 except Exception as _e:
-    print(f"[WARNING] Ollama does NOT appear to be running: {_e}")
+    print(f"[WARNING] Ollama does NOT appear to be running at {_OLLAMA_HOST}: {_e}")
     print(f"[WARNING] Run 'ollama serve' then 'ollama pull {OLLAMA_MODEL}' before using /analyze")
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,38 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Environment files — keep .env.example, never commit real secrets
+# (comment this out if you store non-secret defaults in .env)
+# .env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+merged-smart-city/frontend/.dart_tool/
+merged-smart-city/frontend/.flutter-plugins
+merged-smart-city/frontend/.flutter-plugins-dependencies
+merged-smart-city/frontend/build/
