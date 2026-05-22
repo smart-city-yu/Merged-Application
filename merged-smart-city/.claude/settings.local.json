@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"E:\\\\Merged Version\\\\merged-smart-city\\\\backend\\\\backend\\\\src\" -Recurse -File | Select-Object -First 80 | ForEach-Object { $_.FullName })",
+      "Bash(PGPASSWORD=wadea1234 psql -h localhost -p 5432 -U postgres -d smartcity -f \"E:/Merged Version/merged-smart-city/backend/seed_data.sql\")",
+      "PowerShell($env:PGPASSWORD = 'wadea1234'; & psql -h localhost -p 5432 -U postgres -d smartcity -f \"E:\\\\Merged Version\\\\merged-smart-city\\\\backend\\\\seed_data.sql\" 2>&1)"
+    ]
+  }
+}
