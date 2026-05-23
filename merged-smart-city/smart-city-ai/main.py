@@ -16,36 +16,20 @@ app = FastAPI(title="SmartCity AI Service")
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
-DETECTOR        = os.getenv("DETECTOR", "nemotron").lower().strip()
-YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", "best.pt")
-YOLO_CONFIDENCE = float(os.getenv("YOLO_CONFIDENCE", "0.20"))
+OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 NVIDIA_API_KEY  = os.getenv("NVIDIA_API_KEY", "")
 NVIDIA_MODEL    = "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"
 NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 # ---------------------------------------------------------------------------
-# Load YOLO (only if needed)
-# ---------------------------------------------------------------------------
-yolo_model = None
-if DETECTOR == "yolo":
-    try:
-        from ultralytics import YOLO
-        yolo_model = YOLO(YOLO_MODEL_PATH)
-        print(f"[INFO] YOLO loaded: {YOLO_MODEL_PATH}")
-    except Exception as e:
-        print(f"[WARNING] YOLO load failed: {e}")
-
-# ---------------------------------------------------------------------------
-# NVIDIA client (only if needed)
+# NVIDIA client (Nemotron — image detection)
 # ---------------------------------------------------------------------------
 nvidia_client = None
-if DETECTOR == "nemotron":
-    if not NVIDIA_API_KEY:
-        print("[WARNING] DETECTOR=nemotron but NVIDIA_API_KEY is not set!")
-    else:
-        nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY)
-        print(f"[INFO] Nemotron ready")
+if not NVIDIA_API_KEY:
+    print("[WARNING] NVIDIA_API_KEY is not set — /detect will not work!")
+else:
+    nvidia_client = OpenAI(base_url=NVIDIA_BASE_URL, api_key=NVIDIA_API_KEY)
+    print("[INFO] Nemotron ready")
 
 # ---------------------------------------------------------------------------
 # Startup: verify Ollama is reachable
@@ -63,11 +47,6 @@ except Exception as _e:
 # Constants
 # ---------------------------------------------------------------------------
 VALID_CATEGORIES = ["pothole", "manhole", "lamppost", "speedBump", "treeInRoad", "brokenRoad"]
-
-YOLO_CLASS_NAMES = {
-    0: "pothole", 1: "manhole", 2: "lamppost",
-    3: "speedBump", 4: "treeInRoad", 5: "brokenRoad",
-}
 
 CATEGORY_LABELS = {
     "pothole":       "a pothole or hole in the road surface",
@@ -330,67 +309,19 @@ async def analyze(req: AnalyzeRequest):
 
 
 # ---------------------------------------------------------------------------
-# /detect — Nemotron or YOLO image analysis
+# /detect — Nemotron (NVIDIA) image analysis
 # ---------------------------------------------------------------------------
 @app.post("/detect", response_model=DetectResponse)
 async def detect(req: DetectRequest):
     urls = req.image_urls if req.image_urls else ([req.image_url] if req.image_url else [])
     if not urls:
         raise HTTPException(status_code=400, detail="Provide image_url or image_urls")
-
-    if DETECTOR == "yolo":
-        return await _detect_yolo(urls)
-    else:
-        return await _detect_nemotron(urls)
+    return await _detect_nemotron(urls)
 
 
-# ── YOLO detector ─────────────────────────────────────────────────────────
-async def _detect_yolo(urls: list[str]) -> DetectResponse:
-    if yolo_model is None:
-        raise HTTPException(status_code=503, detail="YOLO model not loaded.")
-
-    import tempfile
-    all_raw = []
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    for url in urls:
-        try:
-            with httpx.Client(timeout=15, headers=headers, follow_redirects=True) as http:
-                resp = http.get(url)
-                resp.raise_for_status()
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-                tmp.write(resp.content)
-                tmp_path = tmp.name
-            try:
-                results = yolo_model(tmp_path, conf=0.01, verbose=False)
-                for result in results:
-                    for box in result.boxes:
-                        cls_id     = int(box.cls[0])
-                        conf       = float(box.conf[0])
-                        class_name = YOLO_CLASS_NAMES.get(cls_id, "other")
-                        all_raw.append({"category": class_name, "confidence": round(conf, 3)})
-            finally:
-                os.remove(tmp_path)
-        except Exception as e:
-            print(f"[WARNING] YOLO skipped image {url}: {e}")
-
-    print(f"[DEBUG] YOLO raw predictions across {len(urls)} image(s): {all_raw}")
-    all_detections = [d for d in all_raw if d["confidence"] >= YOLO_CONFIDENCE]
-    best = max(all_detections, key=lambda x: x["confidence"]) if all_detections else None
-
-    if best:
-        img_word = "images" if len(urls) > 1 else "image"
-        desc = f"Detected {best['category']} with {best['confidence']:.0%} confidence across {len(urls)} {img_word}."
-        return DetectResponse(
-            detected=True, category=best["category"], confidence=best["confidence"],
-            all_detections=all_detections, image_description=desc,
-        )
-
-    return DetectResponse(detected=False, category="other", confidence=0.0,
-                          all_detections=[], image_description="No road issue detected in the image(s).")
-
-
-# ── Nemotron detector ─────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Nemotron detector
+# ---------------------------------------------------------------------------
 async def _detect_nemotron(urls: list[str]) -> DetectResponse:
     if nvidia_client is None:
         raise HTTPException(status_code=503, detail="NVIDIA_API_KEY not set.")
@@ -519,15 +450,10 @@ If no road issue is visible:
 # ---------------------------------------------------------------------------
 @app.get("/health")
 def health():
-    detector_info = (
-        f"yolo (model: {YOLO_MODEL_PATH}, conf: {YOLO_CONFIDENCE}, loaded: {yolo_model is not None})"
-        if DETECTOR == "yolo"
-        else f"nemotron/{NVIDIA_MODEL} (key: {'configured' if NVIDIA_API_KEY else 'MISSING'})"
-    )
     return {
         "status":         "ok",
         "llm":            f"ollama/{OLLAMA_MODEL}",
-        "detector":       DETECTOR,
-        "image_analysis": detector_info,
+        "detector":       "nemotron",
+        "image_analysis": f"nemotron/{NVIDIA_MODEL} (key: {'configured' if NVIDIA_API_KEY else 'MISSING'})",
         "flow":           "Nemotron(/detect) → Qwen-Pass1(text) → Qwen-Pass2(text+image) → verdict",
     }
