@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(Get-ChildItem -Path \"E:\\\\Merged Version\\\\merged-smart-city\\\\frontend\\\\lib\" -Recurse -File)",
-      "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Sort-Object)"
-    ]
-  }
-}

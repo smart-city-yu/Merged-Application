@@ -4,7 +4,20 @@
       "Bash(Select-Object FullName)",
       "PowerShell(Get-ChildItem \"E:\\\\Merged Version\\\\merged-smart-city\\\\backend\\\\backend\\\\src\" -Recurse -File | Select-Object -First 80 | ForEach-Object { $_.FullName })",
       "Bash(PGPASSWORD=wadea1234 psql -h localhost -p 5432 -U postgres -d smartcity -f \"E:/Merged Version/merged-smart-city/backend/seed_data.sql\")",
-      "PowerShell($env:PGPASSWORD = 'wadea1234'; & psql -h localhost -p 5432 -U postgres -d smartcity -f \"E:\\\\Merged Version\\\\merged-smart-city\\\\backend\\\\seed_data.sql\" 2>&1)"
+      "PowerShell($env:PGPASSWORD = 'wadea1234'; & psql -h localhost -p 5432 -U postgres -d smartcity -f \"E:\\\\Merged Version\\\\merged-smart-city\\\\backend\\\\seed_data.sql\" 2>&1)",
+      "Bash(xargs ls -la)",
+      "Read(//usr/share/ollama/models/manifests/registry.ollama.ai/**)",
+      "Bash(ollama list *)",
+      "Bash(systemctl is-active *)",
+      "Bash(systemctl status *)",
+      "Bash(sudo systemctl stop ollama)",
+      "Bash(sudo systemctl disable ollama)",
+      "Bash(docker system *)",
+      "Bash(sudo docker images)",
+      "Bash(sudo docker system df)",
+      "Bash(sudo docker ps -a)",
+      "Bash(sudo docker volume ls)",
+      "Read(//var/lib/docker/**)"
     ]
   }
 }
